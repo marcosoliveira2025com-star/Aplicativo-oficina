@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Oficina • Gestão de Manutenção</title>
+<style>
+:root{--orange:#f47b20;--bg:#111;--panel:#202020;--muted:#aaa;--line:#383838}
+*{box-sizing:border-box}body{margin:0;background:#111;color:#f5f5f5;font:15px Arial,sans-serif}
+header{background:#1b1b1b;border-bottom:3px solid var(--orange);padding:16px;display:flex;align-items:center;gap:12px}
+.logo{background:var(--orange);color:#111;font-weight:bold;padding:12px;border-radius:10px}h1{font-size:19px;margin:0}header small{color:var(--orange)}
+main{max-width:850px;margin:auto;padding:16px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat,.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}.stat b{display:block;font-size:25px;color:var(--orange);margin-top:5px}
+h2{font-size:18px;margin:20px 0 10px}.row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+label{display:block;color:#ccc;font-size:13px;margin:10px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #555;border-radius:8px;background:#151515;color:white;font-size:15px}
+button{border:0;border-radius:8px;padding:12px 15px;font-weight:bold;cursor:pointer}.primary{background:var(--orange);color:#111;width:100%;margin-top:15px}.secondary{background:#383838;color:white}.tabs{display:flex;gap:8px;margin:16px 0}.tabs button{flex:1}.tabs .active{background:var(--orange);color:#111}
+.item{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #383838}.item input{width:19px;height:19px;accent-color:var(--orange)}.item span{flex:1}
+.os{padding:12px;border-bottom:1px solid #444}.os strong{color:var(--orange)}.muted{color:var(--muted);font-size:13px}.hidden{display:none}
+@media(max-width:520px){.row{grid-template-columns:1fr}main{padding:12px}}
+</style></head>
+<body>
+<header><div class="logo">⚙</div><div><h1>OFICINA</h1><small>GESTÃO DE MANUTENÇÃO</small></div></header>
+<main>
+<div class="stats"><div class="stat">Ordens cadastradas<b id="total">0</b></div><div class="stat">Itens marcados<b id="done">0</b></div></div>
+<div class="tabs"><button class="active" id="tabNew" onclick="show('new')">Nova OS</button><button class="secondary" id="tabHistory" onclick="show('history')">Histórico</button></div>
+<section id="new">
+<div class="panel">
+<h2>Abrir ordem de serviço</h2>
+<div class="row"><div><label>Tipo de manutenção</label><select id="type"><option>Corretiva</option><option>Preventiva</option></select></div><div><label>Equipamento / modelo</label><input id="equip" placeholder="Ex.: Scania XT P 360"></div></div>
+<div class="row"><div><label>Tag do caminhão</label><input id="tag" placeholder="Tag"></div><div><label>Placa</label><input id="plate" placeholder="Placa"></div></div>
+<div class="row"><div><label>KM</label><input id="km" type="number" placeholder="Quilometragem"></div><div><label>Horímetro</label><input id="hour" type="number" placeholder="Horas"></div></div>
+<label>Mecânico responsável</label><input id="mechanic" placeholder="Nome do mecânico">
+<h2>Checklist de manutenção</h2><div id="checks"></div>
+<label>Observações / serviços executados</label><textarea id="notes" rows="3" placeholder="Descreva os serviços..."></textarea>
+<button class="primary" onclick="saveOS()">SALVAR ORDEM DE SERVIÇO</button>
+<p class="muted">Demonstração local: os registros ficam salvos neste navegador/aparelho.</p>
+</div></section>
+<section id="history" class="hidden"><div class="panel"><h2>Ordens de serviço salvas</h2><div id="orders" class="muted">Nenhuma OS cadastrada ainda.</div></div></section>
+</main>
+<script>
+const items=['Filtro de ar interno','Filtro de ar externo','Filtro de óleo do motor','Filtro diesel','Filtro Racor','Filtro de ar-condicionado','Óleo do motor','Óleo do diferencial','Óleo do cubo','Óleo da caixa de transmissão'];
+document.getElementById('checks').innerHTML=items.map((x,i)=>`<div class="item"><input type="checkbox" id="c${i}"><span>${x}</span><input aria-label="Quantidade em litros" id="q${i}" type="number" min="0" step=".1" placeholder="Qtd/L" style="max-width:85px"></div>`).join('');
+function getOS(){try{return JSON.parse(localStorage.getItem('oficinaOS')||'[]')}catch(e){return []}}
+function show(which){document.getElementById('new').classList.toggle('hidden',which!=='new');document.getElementById('history').classList.toggle('hidden',which!=='history');document.getElementById('tabNew').className=which==='new'?'active':'secondary';document.getElementById('tabHistory').className=which==='history'?'active':'secondary';if(which==='history')render()}
+function saveOS(){let equip=document.getElementById('equip').value.trim();if(!equip){alert('Informe o equipamento/modelo.');return}
+let checklist=items.map((name,i)=>({name,done:document.getElementById('c'+i).checked,quantity:document.getElementById('q'+i).value}));let data={id:Date.now(),date:new Date().toLocaleString('pt-BR'),type:type.value,equip,tag:tag.value,plate:plate.value,km:km.value,hour:hour.value,mechanic:mechanic.value,checklist,notes:notes.value};
+let all=getOS();all.unshift(data);localStorage.setItem('oficinaOS',JSON.stringify(all));alert('Ordem de serviço salva neste aparelho!');document.querySelectorAll('#new input,#new textarea').forEach(e=>{if(e.type==='checkbox')e.checked=false;else e.value=''});type.value='Corretiva';updateStats();show('history')}
+function render(){let all=getOS();orders.innerHTML=all.length?all.map(o=>`<div class="os"><strong>OS ${o.id.toString().slice(-6)} • ${o.type}</strong><div>${o.equip} — ${o.date}</div><div class="muted">Tag: ${o.tag||'—'} | Placa: ${o.plate||'—'} | KM: ${o.km||'—'} | Horímetro: ${o.hour||'—'}</div><div class="muted">Mecânico: ${o.mechanic||'—'} • Itens concluídos: ${o.checklist.filter(c=>c.done).length}/${o.checklist.length}</div>${o.notes?`<div>${o.notes}</div>`:''}</div>`).join(''):'Nenhuma OS cadastrada ainda.'}
+function updateStats(){let a=getOS();total.textContent=a.length;done.textContent=a.reduce((n,o)=>n+o.checklist.filter(c=>c.done).length,0)}updateStats();
+</script></body></html>
